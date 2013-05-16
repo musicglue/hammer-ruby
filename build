@@ -28,9 +28,8 @@ major_ruby   = version.match(/\d\.\d/)[0]
 build        = false
 build        = true if ENV["BUILD"]
 debug        = nil
-debug        = 'OPTFLAGS="-O0 -ggdb3"' if ENV['DEBUG']
-rubygems     = nil
-rubygems     = "1.8.24" if major_ruby == "1.8"
+debug        = true if ENV['DEBUG']
+rubygems     = ENV['RUBYGEMS_VERSION'] ? ENV['RUBYGEMS_VERSION'] : nil
 
 pipe "curl http://ftp.ruby-lang.org/pub/ruby/#{major_ruby}/#{full_name}.tar.gz -s -o - | tar zxf -"
 
@@ -45,19 +44,31 @@ Dir.mktmpdir("ruby-vendor-") do |vendor_dir|
   prefix = "/tmp/#{name}" if build
 
   puts "prefix: #{prefix}"
-  puts "debug: #{debug}"
 
   Dir.chdir(full_name) do
     configure_opts = "--disable-install-doc --prefix #{prefix}"
     configure_opts += " --enable-load-relative" if major_ruby != "1.8"
+    configure_opts += " optflags=\"-O0\" debugflags=\"-g3 -ggdb\"" if debug
     puts "configure opts: #{configure_opts}"
     cmds = [
       "./configure #{configure_opts}",
-      "env #{debug} CPATH=#{vendor_dir}/include:\\$CPATH CPPATH=#{vendor_dir}/include:\\$CPPATH LIBRARY_PATH=#{vendor_dir}/lib:\\$LIBRARY_PATH make",
+      "env CPATH=#{vendor_dir}/include:\\$CPATH CPPATH=#{vendor_dir}/include:\\$CPPATH LIBRARY_PATH=#{vendor_dir}/lib:\\$LIBRARY_PATH make",
       "make install"
     ]
-    cmds << "#{prefix}/bin/ruby #{vendor_dir}/rubygems-#{rubygems}/setup.rb" if rubygems
-    pipe("#{cmds.join(" && ")}")
+    pipe(cmds.join(" && "))
+  end
+  if rubygems
+    Dir.chdir("#{vendor_dir}/rubygems-#{rubygems}") do
+      pipe("#{prefix}/bin/ruby setup.rb")
+    end
+    gem_bin_file = "#{prefix}/bin/gem"
+    gem = File.read(gem_bin_file)
+    File.open(gem_bin_file, 'w') do |file|
+      file.puts "#!/usr/bin/env ruby"
+      lines = gem.split("\n")
+      lines.shift
+      lines.each {|line| file.puts line }
+    end
   end
   pipe "ls #{prefix}"
   pipe("cp -rf #{prefix}/* #{output_dir}")
