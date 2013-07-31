@@ -46,12 +46,18 @@ Dir.mktmpdir("ruby-vendor-") do |vendor_dir|
   puts "prefix: #{prefix}"
 
   Dir.chdir(full_name) do
+    if debug
+      configure_env = "optflags=\"-O0\" debugflags=\"-g3 -ggdb\""
+    else
+      configure_env = "debugflags=\"-g\""
+    end
+
     configure_opts = "--disable-install-doc --prefix #{prefix}"
     configure_opts += " --enable-load-relative" if major_ruby != "1.8"
-    configure_opts += " optflags=\"-O0\" debugflags=\"-g3 -ggdb\"" if debug
+    puts "configure env:  #{configure_env}"
     puts "configure opts: #{configure_opts}"
     cmds = [
-      "./configure #{configure_opts}",
+      "#{configure_env} ./configure #{configure_opts}",
       "env CPATH=#{vendor_dir}/include:\\$CPATH CPPATH=#{vendor_dir}/include:\\$CPPATH LIBRARY_PATH=#{vendor_dir}/lib:\\$LIBRARY_PATH make",
       "make install"
     ]
