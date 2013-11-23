@@ -62,7 +62,7 @@ Dir.mktmpdir("ruby-vendor-") do |vendor_dir|
     end
 
     configure_opts = "--disable-install-doc --prefix #{prefix}"
-    configure_opts += " --enable-load-relative" if major_ruby != "1.8"
+    configure_opts += " --enable-load-relative" if major_ruby != "1.8" && version != "1.9.2"
     puts "configure env:  #{configure_env}"
     puts "configure opts: #{configure_opts}"
     cmds = [
