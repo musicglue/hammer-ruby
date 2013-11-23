@@ -30,8 +30,15 @@ build        = true if ENV["BUILD"]
 debug        = nil
 debug        = true if ENV['DEBUG']
 rubygems     = ENV['RUBYGEMS_VERSION'] ? ENV['RUBYGEMS_VERSION'] : nil
+git_url      = ENV["GIT_URL"]
 
-pipe "curl http://ftp.ruby-lang.org/pub/ruby/#{major_ruby}/#{full_name}.tar.gz -s -o - | tar zxf -"
+if git_url
+  url, treeish = git_url.split('#', 2)
+  full_name    = "ruby"
+  pipe "git clone #{url}"
+else
+  pipe "curl http://ftp.ruby-lang.org/pub/ruby/#{major_ruby}/#{full_name}.tar.gz -s -o - | tar zxf -"
+end
 
 Dir.mktmpdir("ruby-vendor-") do |vendor_dir|
   Dir.chdir(vendor_dir) do
@@ -46,6 +53,8 @@ Dir.mktmpdir("ruby-vendor-") do |vendor_dir|
   puts "prefix: #{prefix}"
 
   Dir.chdir(full_name) do
+    pipe "git checkout #{treeish}" if treeish
+
     if debug
       configure_env = "optflags=\"-O0\" debugflags=\"-g3 -ggdb\""
     else
@@ -61,6 +70,7 @@ Dir.mktmpdir("ruby-vendor-") do |vendor_dir|
       "env CPATH=#{vendor_dir}/include:\\$CPATH CPPATH=#{vendor_dir}/include:\\$CPPATH LIBRARY_PATH=#{vendor_dir}/lib:\\$LIBRARY_PATH make",
       "make install"
     ]
+    cmds.unshift("#{configure_env} autoconf") if git_url
     pipe(cmds.join(" && "))
   end
   if rubygems
