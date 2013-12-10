@@ -8,9 +8,16 @@ This tool uses [hammer](https://github.com/hone/hammer) for building binaries on
 $ gem install hammer --pre
 ```
 
-Next you can build the binary. For instance `2.0.0-p353`.
+Now clone this repo:
 
 ```sh
+git clone git://github.com/hone/hammer-ruby.git
+```
+
+You'll need to be in the hammer-ruby directory in order to build. After, you can build the binary. For instance `2.0.0-p353`.
+
+```sh
+$ cd hammer-ruby
 $ hammer build --env VERSION:2.0.0-p353
 ```
 
