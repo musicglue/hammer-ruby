@@ -42,7 +42,7 @@ end
 
 Dir.mktmpdir("ruby-vendor-") do |vendor_dir|
   Dir.chdir(vendor_dir) do
-    `curl "#{vendor_url}/libyaml-0.1.4.tgz" -s -o - | tar zxf -`
+    `curl "#{vendor_url}/libyaml-0.1.5.tgz" -s -o - | tar zxf -`
     `curl "#{vendor_url}/libffi-3.0.10.tgz" -s -o - | tar zxf -`
     `curl http://production.cf.rubygems.org/rubygems/rubygems-#{rubygems}.tgz -s -o - | tar xzf -` if rubygems
   end
