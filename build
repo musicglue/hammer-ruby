@@ -16,6 +16,11 @@ def pipe(command)
   output
 end
 
+def puts_and_pipe command
+  puts command
+  pipe command
+end
+
 workspace_dir = ARGV[0]
 output_dir    = ARGV[1]
 
@@ -32,25 +37,32 @@ debug        = true if ENV['DEBUG']
 rubygems     = ENV['RUBYGEMS_VERSION'] ? ENV['RUBYGEMS_VERSION'] : nil
 git_url      = ENV["GIT_URL"]
 
+autoconf_version = ENV["AUTOCONF_VERSION"] || '2.69'
+autoconf_dir = "#{Dir.pwd}/autoconf-#{autoconf_version}"
+autoconf_bin_dir = "#{autoconf_dir}/bin"
+
 if git_url
   url, treeish = git_url.split('#', 2)
   full_name    = "ruby"
   pipe "git clone #{url}"
+  pipe "curl http://ftp.gnu.org/gnu/autoconf/autoconf-#{autoconf_version}.tar.gz -s -o - | tar zxf -"
 else
   pipe "curl http://ftp.ruby-lang.org/pub/ruby/#{major_ruby}/#{full_name}.tar.gz -s -o - | tar zxf -"
 end
 
 Dir.mktmpdir("ruby-vendor-") do |vendor_dir|
+  Dir.chdir(autoconf_dir) do
+    pipe "./configure --prefix=#{vendor_dir} && make && make install"
+  end
+
   Dir.chdir(vendor_dir) do
-    `curl "#{vendor_url}/libyaml-0.1.5.tgz" -s -o - | tar zxf -`
-    `curl "#{vendor_url}/libffi-3.0.10.tgz" -s -o - | tar zxf -`
-    `curl http://production.cf.rubygems.org/rubygems/rubygems-#{rubygems}.tgz -s -o - | tar xzf -` if rubygems
+    puts_and_pipe %Q{curl "#{vendor_url}/libyaml-0.1.5.tgz" -s -o - | tar zxf -}
+    puts_and_pipe %Q{curl "#{vendor_url}/libffi-3.0.10.tgz" -s -o - | tar zxf -}
+    puts_and_pipe %Q{curl http://production.cf.rubygems.org/rubygems/rubygems-#{rubygems}.tgz -s -o - | tar xzf -} if rubygems
   end
 
   prefix = "/app/vendor/#{name}"
   prefix = "/tmp/#{name}" if build
-
-  puts "prefix: #{prefix}"
 
   Dir.chdir(full_name) do
     pipe "git checkout #{treeish}" if treeish
@@ -63,15 +75,14 @@ Dir.mktmpdir("ruby-vendor-") do |vendor_dir|
 
     configure_opts = "--disable-install-doc --prefix #{prefix}"
     configure_opts += " --enable-load-relative" if major_ruby != "1.8" && version != "1.9.2"
+
     puts "configure env:  #{configure_env}"
     puts "configure opts: #{configure_opts}"
-    cmds = [
-      "#{configure_env} ./configure #{configure_opts}",
-      "env CPATH=#{vendor_dir}/include:\\$CPATH CPPATH=#{vendor_dir}/include:\\$CPPATH LIBRARY_PATH=#{vendor_dir}/lib:\\$LIBRARY_PATH make",
-      "make install"
-    ]
-    cmds.unshift("#{configure_env} autoconf") if git_url
-    pipe(cmds.join(" && "))
+
+    puts_and_pipe %Q{PATH="#{vendor_dir}/bin:$PATH" #{configure_env} autoconf} if git_url
+    puts_and_pipe %Q{#{configure_env} ./configure #{configure_opts}}
+    puts_and_pipe %Q{env PATH="#{vendor_dir}/bin:$PATH" CPATH=#{vendor_dir}/include:\\$CPATH CPPATH=#{vendor_dir}/include:\\$CPPATH LIBRARY_PATH=#{vendor_dir}/lib:\\$LIBRARY_PATH make}
+    puts_and_pipe "make install"
   end
   if rubygems
     Dir.chdir("#{vendor_dir}/rubygems-#{rubygems}") do
