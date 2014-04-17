@@ -1,0 +1,14 @@
+mkdir /tmp/ruby-vendor-20140417-67-ookwhu
+git clone https://github.com/github/ruby.git
+curl http://ftp.gnu.org/gnu/autoconf/autoconf-2.69.tar.gz -s -o - | tar zxf -
+cd autoconf-2.69
+./configure --prefix=/tmp/ruby-vendor-20140417-67-ookwhu && make && make install
+cd ..
+cd /tmp/ruby-vendor-20140417-67-ookwhu
+curl "https://s3.amazonaws.com/heroku-buildpack-ruby/libyaml-0.1.5.tgz" -s -o - | tar zxf -
+curl "https://s3.amazonaws.com/heroku-buildpack-ruby/libffi-3.0.10.tgz" -s -o - | tar zxf -
+cd ~/ruby
+git checkout 2.1
+PATH="/tmp/ruby-vendor-20140417-67-ookwhu/bin:$PATH" debugflags="-g" autoconf
+debugflags="-g" ./configure --disable-install-doc --prefix /app/vendor/ruby-2.1.1 --enable-load-relative
+env PATH=/tmp/ruby-vendor-20140417-67-ookwhu/bin:\\$PATH CPATH=/tmp/ruby-vendor-20140417-67-ookwhu/include:\$CPATH CPPATH=/tmp/ruby-vendor-20140417-67-ookwhu/include:\$CPPATH LIBRARY_PATH=/tmp/ruby-vendor-20140417-67-ookwhu/lib:\$LIBRARY_PATH make
